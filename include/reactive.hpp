@@ -1,7 +1,10 @@
+#ifndef REACTIVE_HPP
+#define REACTIVE_HPP
 
 #include <memory>
 #include <functional>
 #include <vector>
+#include <iostream>
 
 namespace reactive {
 namespace impl {
@@ -59,7 +62,7 @@ auto returnBool(bool R, F f, X...x) -> bool {
 
 auto makeReturnBool = [](auto f) {
   return [=](auto...x) {
-    return returnBool(0, f, x...);
+    return returnBool(true, f, x...);
   };
 };
 
@@ -103,9 +106,57 @@ struct Pipeline {
 
 
 auto pipe = [](auto...pipes) {
-  auto a = apply(pipes...);
+  auto a = apply(makeReturnBool(pipes)...);
   return Pipeline<decltype(a)>{a};
 };
+
+
+auto map = [](auto f){ return [f](auto x, auto push){ return push(f(x)); }; };
+
+auto filter = [](auto f){ return [f](auto x, auto push){ if(f(x)) return push(x); return true; }; };
+
+auto scan = [](auto init, auto f) {
+  auto s = std::make_shared<decltype(init)>(init);
+  auto& state = *s;
+  return [&state, s, f](auto x, auto push) {
+    return push(state = f(state, x));
+  };
+};
+
+auto repeat = [](auto n, auto f) {
+  auto s = std::make_shared<decltype(n)>(n);
+  auto& i = *s;
+  return [&i, s, f, n](auto x, auto push) {
+    while(i--) {
+      if( !push(f(x)) ) {
+        return false;
+      }
+    }
+    i=n;
+    return true;
+  };
+};
+
+auto forEach = [](auto f) {
+  return [=](auto x, auto push) {
+    f(x);
+    return push(x);
+  };
+};
+
+
+
+
+template<class T>
+auto buffer(){
+  auto vp = std::make_shared<std::vector<T>>();
+  auto& v = *vp;
+  return [vp, &v](auto x, auto push) {
+    v.push_back(x);
+    return push(std::ref(v));
+  };
+}
+
 
 template<class N, class P>
 struct Broker {
@@ -135,47 +186,7 @@ auto publish(P p) {
   return Broker<decltype(f)&, decltype(pipe)>{f, pipe};
 };
 
-auto map = [](auto f){ return [f](auto x, auto push){ return push(f(x)); }; };
-auto filter = [](auto f){ return [f](auto x, auto push){ if(f(x)) push(x);}; };
-auto scan = [](auto init, auto f) {
-  auto s = std::make_shared<decltype(init)>(init);
-  auto& state = *s;
-  return [&state, s, f](auto x, auto push) {
-    return push(state = f(state, x));
-  };
-};
 
-auto repeat = [](auto n, auto f) {
-  auto s = std::make_shared<decltype(n)>(n);
-  auto& i = *s;
-  return [&i, s, f](auto x, auto push) {
-    while(i) {
-      if( !push(f(x)) ) { return 0; }
-      --i;
-    }
-    return 1;
-  };
-};
-
-auto forEach = [](auto f) {
-  return [=](auto x, auto push) {
-    f(x);
-    return push(x);
-  };
-};
-
-
-
-
-template<class T>
-auto buffer(){
-  auto vp = std::make_shared<std::vector<T>>();
-  auto& v = *vp;
-  return [vp, &v](auto x, auto push) {
-    v.push_back(x);
-    return push(std::ref(v));
-  };
-}
 }
 
-
+#endif
