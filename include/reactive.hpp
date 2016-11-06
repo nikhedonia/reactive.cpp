@@ -124,18 +124,62 @@ auto scan = [](auto init, auto f) {
 };
 
 auto repeat = [](auto n, auto f) {
-  auto s = std::make_shared<decltype(n)>(n);
-  auto& i = *s;
-  return [&i, s, f, n](auto x, auto push) {
-    while(i--) {
-      if( !push(f(x)) ) {
+  return [f, n](auto x, auto push) {
+    for(decltype(n) i=0; i < n; ++i) {
+      if( !push( f(x) ) ) {
         return false;
       }
     }
-    i=n;
     return true;
   };
 };
+
+auto enumerate = [](auto init=0) {
+  auto s = std::make_shared<decltype(init)>(init);
+  auto& i = *s;
+  return [i,s](auto x, auto push){
+    return push(x,i++);
+  };
+};
+
+auto take = [](auto n) {
+  auto s = std::make_shared<decltype(n)>(n);
+  auto& i = *s;
+  return [i,s](auto x, auto push) {
+    if(i--) {
+      return push(x);
+    }
+    return false;
+  };
+};
+
+auto drop = [](auto n) {
+  auto s = std::make_shared<decltype(n)>(n);
+  auto& i = *s;
+  return [i,s](auto x, auto push) {
+    if(i) {
+      i--;
+    } else {
+      return push(x);
+    }
+  };
+};
+
+auto takeUntil = [](auto f) {
+  return [f](auto x, auto push) {
+    if( f(x) ) { return push(x); }
+    return false;
+  };
+};
+
+auto dropUntil = [](auto f) {
+  return [f](auto x, auto push) {
+    if( f(x) ) { return true; }
+    return push(x);
+  };
+};
+
+
 
 auto forEach = [](auto f) {
   return [=](auto x, auto push) {
