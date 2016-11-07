@@ -145,8 +145,9 @@ auto enumerate = [](auto init=0) {
 auto take = [](auto n) {
   auto s = std::make_shared<decltype(n)>(n);
   auto& i = *s;
-  return [i,s](auto x, auto push) {
-    if(i--) {
+  return [&i,s](auto x, auto push) {
+    if(i) {
+      --i;
       return push(x);
     }
     return false;
@@ -156,7 +157,7 @@ auto take = [](auto n) {
 auto drop = [](auto n) {
   auto s = std::make_shared<decltype(n)>(n);
   auto& i = *s;
-  return [i,s](auto x, auto push) {
+  return [&i,s](auto x, auto push) {
     if(i) {
       i--;
     } else {

@@ -26,13 +26,6 @@ int main() {
 
   p(1);
   p(2);
-  //p(3);
-  //p(4);
-
-  //p.subscribe([](auto x, auto y) { std::cout << x <<"|" << y<< std::endl; });
- // p(1);
- // p(1);
-
 
   return 0;
 }
