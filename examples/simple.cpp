@@ -12,7 +12,7 @@ int main() {
 
   auto p = pipe(
     repeat(4, [](auto x){ return x; } ),
-    forEach( [](auto x){ std::cout << "in: " << x <<std::endl;}),
+    forEach([](auto x){ std::cout << "in: " << x <<std::endl;}),
     scan(0, [](auto x, auto y) { return x+y; }),
     map([](auto x){ return x+1;}),
     filter([](auto x) { return x != 4; }),
@@ -24,9 +24,13 @@ int main() {
     std::cout<< ("out: " + std::to_string( x )  ) << std::endl;
   }).create();
 
+  auto exec = pipe(
+    just(1,2,3),
+    sink
+  ).create();
 
-  sink(1);
-  sink(2);
+  exec();
+
 
   return 0;
 }

@@ -180,8 +180,6 @@ auto dropUntil = [](auto f) {
   };
 };
 
-
-
 auto forEach = [](auto f) {
   return [=](auto x, auto push) {
     f(x);
@@ -189,7 +187,11 @@ auto forEach = [](auto f) {
   };
 };
 
-
+auto just = [](auto...x) {
+  return [=](auto push) {
+    nop(push(x)...);
+  };
+};
 
 
 template<class T>
