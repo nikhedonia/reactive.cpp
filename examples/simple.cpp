@@ -4,6 +4,7 @@
 #include <chrono>
 #include <string>
 
+
 int main() {
   using namespace std::chrono_literals;
   using namespace reactive;
@@ -16,16 +17,16 @@ int main() {
     map([](auto x){ return x+1;}),
     filter([](auto x) { return x != 4; }),
     wait(1s),
-    asyncify(Pool),
-    [](auto x) {
-      std::cout<< ("out: " + std::to_string( x )  ) << std::endl;
-      return x%7;
-    }
-  ).create();
+    asyncify(Pool)
+  );
+
+  auto sink = p.pipe([](auto x) {
+    std::cout<< ("out: " + std::to_string( x )  ) << std::endl;
+  }).create();
 
 
-  p(1);
-  p(2);
+  sink(1);
+  sink(2);
 
   return 0;
 }
