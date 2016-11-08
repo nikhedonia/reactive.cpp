@@ -4,33 +4,37 @@ functional reactive library for push based zero-overhead event streams
 # Example
 
 ```
-auto p1 = pipe(
-  [](auto x, auto push) { push(x); push(x+1); } ), // push x and x+1
-  map( [](auto x) { return x*2; }), // push doubled values 
-  scan( 0 , [](auto x, auto y) { return x+y; } ), // accumulate values
-  filter( [](auto x){ return x%4 == 0; } ), // only push to next pipe if x%4==0
-  buffer<int>() // push to buffer
-);
+int main() {
+  using namespace std::chrono_literals;
+  using namespace reactive;
+  ThreadPool Pool(4);
 
-auto p2 = p1.push(
-  [](auto buffer, auto push) {  //collect and push groups of two
-    auto& b = buffer.get();
-    if(b.size() == 2){ 
-      push( b[0] , b[1] );
-      b.clear();
-    }
-  })
-);
+  auto p1 = pipe(
+    repeat(4, [](auto x){ return x; } ),
+    forEach([](auto x){ std::cout << "input: " << x <<std::endl;}),
+    scan(0, [](auto x, auto y) { return x+y; }), // pushes sum
+    map([](auto x){ return x*10;}), // push x*10
+    filter([](auto x) { return x%4==0; }) filter-out if
+  );
 
-auto observable = publish<void(int,int)>(p2);
+  auto p2 = p.pipe(
+    asyncify(Pool), // make it async by pusing it to worker-queue
+    wait(1s) // wait 1s before pushing it to next
+  );
 
-observable.subscribe([](auto x, auto y) { std::cout << x << "|" << y << std::endl;  });
-observable.push(1);
-observable.push(2);
-observable.push(3);
-observable.push(4);
+  auto sink = p2.pipe([](auto x) {
+    std::cout<< ("out: " + std::to_string( x )  ) << std::endl;
+  }).create();
 
+  auto exec = pipe(
+    just(1), // push just 1
+    sink
+  ).create();
 
+  exec();
+
+  return 0;
+}
 ```
 ## GOALS
 - zero overhead abstractions for static pipes

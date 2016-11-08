@@ -8,6 +8,7 @@
 
 namespace reactive {
 namespace impl {
+
 template<class F0>
 auto compose(F0 f) {
   return [=](auto...x) {
@@ -33,11 +34,9 @@ auto composeR(F0 f0) {
 template<class F0, class...F>
 auto composeR(F0 f0, F...f) {
   return [=](auto...x) mutable {
-    return f0(x..., composeR(f...) );
+    return f0(composeR(f...), x... );
   };
 }
-
-
 
 }
 
@@ -111,22 +110,31 @@ auto pipe = [](auto...pipes) {
 };
 
 
-auto map = [](auto f){ return [f](auto x, auto push){ return push(f(x)); }; };
+auto map = [](auto f) {
+  return [f](auto push, auto...x){
+    return push(f(x...));
+  };
+};
 
-auto filter = [](auto f){ return [f](auto x, auto push){ if(f(x)) return push(x); return true; }; };
+auto filter = [](auto f) {
+  return [f](auto push, auto...x) {
+    if(f(x...)) return push(x...);
+    return true;
+  };
+};
 
 auto scan = [](auto init, auto f) {
   auto s = std::make_shared<decltype(init)>(init);
   auto& state = *s;
-  return [&state, s, f](auto x, auto push) {
-    return push(state = f(state, x));
+  return [&state, s, f](auto push, auto...x) {
+    return push(state = f(state, x...));
   };
 };
 
 auto repeat = [](auto n, auto f) {
-  return [f, n](auto x, auto push) {
+  return [f, n](auto push, auto...x) {
     for(decltype(n) i=0; i < n; ++i) {
-      if( !push( f(x) ) ) {
+      if( !push( f(x...) ) ) {
         return false;
       }
     }
@@ -137,18 +145,18 @@ auto repeat = [](auto n, auto f) {
 auto enumerate = [](auto init=0) {
   auto s = std::make_shared<decltype(init)>(init);
   auto& i = *s;
-  return [i,s](auto x, auto push){
-    return push(x,i++);
+  return [i,s](auto push, auto...x) {
+    return push(i++, x...);
   };
 };
 
 auto take = [](auto n) {
   auto s = std::make_shared<decltype(n)>(n);
   auto& i = *s;
-  return [&i,s](auto x, auto push) {
+  return [&i,s](auto push, auto...x) {
     if(i) {
       --i;
-      return push(x);
+      return push(x...);
     }
     return false;
   };
@@ -157,33 +165,41 @@ auto take = [](auto n) {
 auto drop = [](auto n) {
   auto s = std::make_shared<decltype(n)>(n);
   auto& i = *s;
-  return [&i,s](auto x, auto push) {
+  return [&i,s](auto push, auto...x) {
     if(i) {
       i--;
     } else {
-      return push(x);
+      return push(x...);
     }
   };
 };
 
 auto takeUntil = [](auto f) {
-  return [f](auto x, auto push) {
-    if( f(x) ) { return push(x); }
+  return [f](auto push, auto...x) {
+    if( f(x...) ) { return push(x...); }
     return false;
   };
 };
 
 auto dropUntil = [](auto f) {
-  return [f](auto x, auto push) {
-    if( f(x) ) { return true; }
-    return push(x);
+  return [f](auto push, auto...x) {
+    if( f(x...) ) { return true; }
+    return push(x...);
   };
 };
 
 auto forEach = [](auto f) {
-  return [=](auto x, auto push) {
-    f(x);
-    return push(x);
+  return [=](auto push, auto...x) {
+    f(x...);
+    return push(x...);
+  };
+};
+
+auto range = [](auto r) {
+  return [=](auto push) {
+    for(auto const& x : r) {
+      push(x);
+    }
   };
 };
 
@@ -198,8 +214,8 @@ template<class T>
 auto buffer(){
   auto vp = std::make_shared<std::vector<T>>();
   auto& v = *vp;
-  return [vp, &v](auto x, auto push) {
-    v.push_back(x);
+  return [vp, &v](auto push, auto...x) {
+    v.emplace_back(x...);
     return push(std::ref(v));
   };
 }

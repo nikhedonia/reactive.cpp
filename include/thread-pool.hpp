@@ -71,15 +71,15 @@ inline ThreadPool::~ThreadPool()
 
 
 auto wait = [](auto time) {
-  return [time](auto x, auto push) {
+  return [time](auto push, auto...x) {
     std::this_thread::sleep_for(time);
-    return push(x);
+    return push(x...);
   };
 };
 
 auto asyncify = [](auto& Pool) {
-  return [&] (auto x, auto push) {
-    Pool.enqueue([x, push]()mutable{ push(x); });
+  return [&] (auto push, auto...x) {
+    Pool.enqueue([=]()mutable{ push(x...); });
   };
 };
 
