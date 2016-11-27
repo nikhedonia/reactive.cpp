@@ -1,33 +1,38 @@
-#include <reactive.hpp>
-#include <thread-pool.hpp>
+#include <piped/pipes.hpp>
 #include <iostream>
 #include <chrono>
 #include <string>
-
+#include <vector>
 
 int main() {
   using namespace std::chrono_literals;
-  using namespace reactive;
-  ThreadPool Pool(4);
+  using namespace piped;
 
-  auto p = pipe(
-    repeat(4, [](auto x){ return x; } ),
-    forEach([](auto x){ std::cout << "in: " << x <<std::endl;}),
-    scan(0, [](auto x, auto y) { return x+y; }),
-    map([](auto x){ return x+1;}),
-    filter([](auto x) { return x != 4; }),
-    wait(1s),
-    asyncify(Pool)
+  std::vector<int> v = {1,2,3,4,5,6,7,8,9};
+
+  auto log = [](auto name) {
+    return each([=](auto x) { std::cout << name <<":" << x << std::endl; } );
+  };
+
+
+  auto composedPipe  = compose(
+    drop(1),
+    log("after drop"),
+    filter([](auto x) { return x % 2; }),
+    log("after filter"),
+    map([](auto x){ return x*100; }),
+    take(3)
   );
 
-  auto sink = p.pipe([](auto x) {
-    std::cout<< ("out: " + std::to_string( x )  ) << std::endl;
-  }).create();
+  auto exec = compose(
+		range(v),
+    log("after range"),
+    composedPipe,
+    sink([](auto x) {
+      std::cout<< ("out: " + std::to_string( x )  ) << std::endl;
+  	})
+	).create();
 
-  auto exec = pipe(
-    just(1,2,3),
-    sink
-  ).create();
 
   exec();
 
